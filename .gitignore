@@ -1,0 +1,124 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# =========================
+# Virtual Environments
+# =========================
+venv/
+.venv/
+env/
+ENV/
+
+# =========================
+# Build / Distribution
+# =========================
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+
+# =========================
+# Environment Variables
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Database
+# =========================
+*.db
+*.sqlite3
+
+# =========================
+# Pytest
+# =========================
+.pytest_cache/
+.coverage
+htmlcov/
+
+# =========================
+# MyPy
+# =========================
+.mypy_cache/
+
+# =========================
+# Ruff
+# =========================
+.ruff_cache/
+
+# =========================
+# Pyright / Pylance
+# =========================
+.pyright/
+
+# =========================
+# IDE
+# =========================
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# JetBrains
+.idea/
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Alembic
+# =========================
+alembic/versions/*.pyc
+
+# =========================
+# Docker
+# =========================
+docker-data/
+postgres_data/
+qdrant_data/
+
+# =========================
+# Uploads
+# =========================
+uploads/
+temp/
+tmp/
+
+# =========================
+# Redis / Celery
+# =========================
+celerybeat-schedule
+*.pid
+
+# =========================
+# Monitoring
+# =========================
+grafana_data/
+prometheus_data/
+
+# =========================
+# Secrets
+# =========================
+secrets/
+*.pem
+*.key

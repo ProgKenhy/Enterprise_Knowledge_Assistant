@@ -1,0 +1,128 @@
+from functools import lru_cache
+from pathlib import Path
+
+from pydantic import RedisDsn, SecretStr, computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+
+
+class Settings(BaseSettings):
+    """App settings"""
+
+    model_config = SettingsConfigDict(
+        env_file=BASE_DIR / ".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="allow",
+    )
+
+    # App
+    APP_NAME: str = "Enterprise RAG"
+    DEBUG: bool = False
+    SECRET_KEY: str = "my_secret_key_change_it_on_production!"
+    API_V1_PREFIX: str = "/api/v1"
+
+    # Database
+    POSTGRES_HOST: str
+    POSTGRES_PORT: int
+    POSTGRES_PORT_FORWARD: int
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: SecretStr
+    POSTGRES_DB: str
+
+    @property
+    def db_port(self) -> int:
+        if self.POSTGRES_HOST == "localhost":
+            return self.POSTGRES_PORT_FORWARD
+        return self.POSTGRES_PORT
+
+    # Redis
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_PORT_FORWARD: int
+    REDIS_DB: int
+    REDIS_PASSWORD: SecretStr | None = None
+
+    @property
+    def redis_port(self) -> int:
+        if self.REDIS_HOST == "localhost":
+            return self.REDIS_PORT_FORWARD
+        return self.REDIS_PORT
+
+    # Qdrant
+    QDRANT_URL: str = "http://localhost:6333"
+    QDRANT_API_KEY: str | None = None
+    QDRANT_COLLECTION: str = "knowledge_base"
+
+    # Embeddings
+    EMBEDDING_MODEL: str = "BAAI/bge-m3"  # или openai
+    EMBEDDING_PROVIDER: str = "local"  # local или openai
+    OPENAI_API_KEY: str | None = None
+    EMBEDDING_BATCH_SIZE: int = 32
+    EMBEDDING_DIM: int = 1024
+
+    # Reranker
+    RERANKER_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    RERANKER_TOP_K: int = 5
+
+    # LLM
+    LLM_PROVIDER: str = "openai"  # openai, anthropic, ollama
+    LLM_MODEL: str = "gpt-4o-mini"
+    LLM_TEMPERATURE: float = 0.0
+    LLM_MAX_TOKENS: int = 1500
+
+    # Documents
+    UPLOAD_DIR: Path = Path(BASE_DIR / "uploads")
+
+    # RAG
+    RETRIEVAL_TOP_K: int = 20  # Сколько кандидатов для reranker
+    RERANK_TOP_K: int = 5  # Сколько после reranking
+    CHUNK_SIZE: int = 512  # Токены
+    CHUNK_OVERLAP: int = 50  # Токены
+
+    # Cache
+    CACHE_TTL: int = 3600  # Секунды
+    SEMANTIC_CACHE_THRESHOLD: float = 0.95
+
+    # Celery
+    CELERY_BROKER_URL: str = "amqp://guest:guest@localhost:5672//"
+
+    # CORS
+    CORS_ORIGINS: str
+
+    # Auth
+    JWT_ALG: str
+    JWT_PRIVATE_KEY_PATH: Path = Path(BASE_DIR / "keys/private.pem")
+    JWT_PUBLIC_KEY_PATH: Path = Path(BASE_DIR / "keys/public.pem")
+    ACCESS_TOKEN_EXPIRE_SECONDS: int = 15 * 60
+    REFRESH_TOKEN_EXPIRE_SECONDS: int = 7 * 24 * 60 * 60  # 7 дней
+
+    @property
+    def postgres_async_url(self) -> str:
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD.get_secret_value()}@{self.POSTGRES_HOST}:{self.db_port}/{self.POSTGRES_DB}"
+
+    @property
+    def postgres_sync_url(self) -> str:
+        return f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD.get_secret_value()}@{self.POSTGRES_HOST}:{self.db_port}/{self.POSTGRES_DB}"
+
+    @computed_field
+    @property
+    def redis_url(self) -> str:
+        redis_dsn = RedisDsn.build(
+            scheme="redis",
+            username=None,
+            password=(self.REDIS_PASSWORD.get_secret_value() if self.REDIS_PASSWORD else None),
+            host=self.REDIS_HOST,
+            port=self.REDIS_PORT,
+            path=f"{self.REDIS_DB}",
+        )
+        return str(redis_dsn)
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()  # type: ignore[call-arg]
+
+
+settings = get_settings()
