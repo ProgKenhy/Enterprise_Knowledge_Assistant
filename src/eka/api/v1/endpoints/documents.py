@@ -13,9 +13,7 @@ from eka.repositories.document import (
     upload_document,
 )
 from eka.schemas.document import DocumentListResponse, DocumentResponse
-
-# Задача Celery — подключим на шаге 7, пока заглушка
-# from tasks.indexing_tasks import index_document
+from eka.tasks.indexing import index_document
 
 documents_router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -48,13 +46,13 @@ async def upload_document_endpoint(
     await db.commit()
     await db.refresh(document)
 
-    # Запуск индексирования в фоне (раскомментировать на шаге 7)
-    # index_document.delay(
-    #     document_id=str(document.id),
-    #     tenant_id=str(current_user.tenant_id),
-    #     file_path=document.file_path,
-    #     source_type=document.source_type,
-    # )
+    # Запуск индексирования в фоне
+    index_document.delay(  # type: ignore[attr-defined]
+        document_id=str(document.id),
+        tenant_id=str(current_user.tenant_id),
+        file_path=document.file_path,
+        source_type=document.source_type,
+    )
 
     return DocumentResponse.model_validate(document)
 

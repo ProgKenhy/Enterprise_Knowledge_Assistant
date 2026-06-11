@@ -51,16 +51,17 @@ class Settings(BaseSettings):
         return self.REDIS_PORT
 
     # Qdrant
-    QDRANT_URL: str = "http://localhost:6333"
+    QDRANT_URL: str = "http://qdrant:6333"
     QDRANT_API_KEY: str | None = None
     QDRANT_COLLECTION: str = "knowledge_base"
 
     # Embeddings
-    EMBEDDING_MODEL: str = "BAAI/bge-m3"  # или openai
-    EMBEDDING_PROVIDER: str = "local"  # local или openai
+    EMBEDDING_SPARSE_MODEL: str = "Qdrant/bm25"
+    EMBEDDING_DENSE_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    EMBEDDING_PROVIDER: str = "local"
     OPENAI_API_KEY: str | None = None
     EMBEDDING_BATCH_SIZE: int = 32
-    EMBEDDING_DIM: int = 1024
+    EMBEDDING_DIM: int = 384
 
     # Reranker
     RERANKER_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
@@ -86,7 +87,8 @@ class Settings(BaseSettings):
     SEMANTIC_CACHE_THRESHOLD: float = 0.95
 
     # Celery
-    CELERY_BROKER_URL: str = "amqp://guest:guest@localhost:5672//"
+    CELERY_BROKER_URL: str = "amqp://guest:guest@rabbitmq:5672//"
+    CELERY_RESULT_BACKEND: str = "redis://redis:6379/1"
 
     # CORS
     CORS_ORIGINS: str

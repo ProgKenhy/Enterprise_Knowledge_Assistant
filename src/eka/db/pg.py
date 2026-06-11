@@ -1,4 +1,6 @@
+from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
 from eka.config import settings
 
@@ -17,3 +19,7 @@ AsyncSessionLocal = async_sessionmaker(
     class_=AsyncSession,
     expire_on_commit=False,  # Отключаем detached-state баги для асинхронности
 )
+
+sync_engine = create_engine(settings.postgres_sync_url)
+
+SyncSessionLocal = sessionmaker(bind=sync_engine, expire_on_commit=False)

@@ -25,9 +25,7 @@ def docx_file(content: bytes = FAKE_DOCX):
 
 
 class TestUploadDocument:
-    async def test_admin_can_upload_pdf(self, client, admin_headers, tmp_path, monkeypatch):
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
-
+    async def test_admin_can_upload_pdf(self, client, admin_headers, mock_celery_tasks):
         response = await client.post(
             "/api/v1/docs/documents",
             files={"file": ("doc.pdf", io.BytesIO(FAKE_PDF), "application/pdf")},
@@ -37,13 +35,20 @@ class TestUploadDocument:
 
         assert response.status_code == 201
         body = response.json()
+
+        # Проверка celery
+        mock_celery_tasks.assert_called_once()
+
+        # Проверим переданные аргументы
+        call_kwargs = mock_celery_tasks.call_args.kwargs
+        assert call_kwargs["document_id"] == body["id"]
+        assert call_kwargs["source_type"] == "pdf"
+
         assert body["title"] == "Test Document"
         assert body["source_type"] == "pdf"
         assert body["status"] == "pending"
 
-    async def test_admin_can_upload_docx(self, client, admin_headers, tmp_path, monkeypatch):
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
-
+    async def test_admin_can_upload_docx(self, client, admin_headers):
         response = await client.post(
             "/api/v1/docs/documents",
             files={"file": docx_file()[1]},
@@ -54,10 +59,8 @@ class TestUploadDocument:
         assert response.status_code == 201
         assert response.json()["source_type"] == "docx"
 
-    async def test_regular_user_cannot_upload(self, client, user_headers, tmp_path, monkeypatch):
+    async def test_regular_user_cannot_upload(self, client, user_headers):
         """Загрузка документов — только для admin и выше."""
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
-
         response = await client.post(
             "/api/v1/docs/documents",
             files={"file": ("doc.pdf", io.BytesIO(FAKE_PDF), "application/pdf")},
@@ -67,9 +70,7 @@ class TestUploadDocument:
 
         assert response.status_code == 403
 
-    async def test_unsupported_format_rejected(self, client, admin_headers, tmp_path, monkeypatch):
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
-
+    async def test_unsupported_format_rejected(self, client, admin_headers):
         response = await client.post(
             "/api/v1/docs/documents",
             files={"file": ("image.png", io.BytesIO(b"fake png"), "image/png")},
@@ -79,9 +80,8 @@ class TestUploadDocument:
 
         assert response.status_code == 415
 
-    async def test_duplicate_file_rejected(self, client, admin_headers, tmp_path, monkeypatch):
+    async def test_duplicate_file_rejected(self, client, admin_headers):
         """Одинаковый файл нельзя загрузить дважды в один тенант."""
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
         file_data = {"file": ("doc.pdf", io.BytesIO(FAKE_PDF), "application/pdf")}
         data = {"title": "Same File"}
 
@@ -97,9 +97,7 @@ class TestUploadDocument:
         )
         assert second_response.status_code == 409
 
-    async def test_no_auth_returns_401(self, client, tmp_path, monkeypatch):
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
-
+    async def test_no_auth_returns_401(self, client):
         response = await client.post(
             "/api/v1/docs/documents",
             files={"file": ("doc.pdf", io.BytesIO(FAKE_PDF), "application/pdf")},
@@ -110,11 +108,7 @@ class TestUploadDocument:
 
 
 class TestListDocuments:
-    async def test_returns_own_tenant_documents(
-        self, client, db, admin_user, admin_headers, tmp_path, monkeypatch
-    ):
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
-
+    async def test_returns_own_tenant_documents(self, client, db, admin_user, admin_headers):
         # Загружаем 2 документа
         for i in range(2):
             await client.post(
@@ -133,13 +127,11 @@ class TestListDocuments:
         assert body["total"] == 2
         assert len(body["items"]) == 2
 
-    async def test_tenant_isolation(self, client, db, tmp_path, monkeypatch):
+    async def test_tenant_isolation(self, client, db):
         """
         Пользователь видит только документы своего тенанта.
         Это один из самых важных тестов в мультитенантной системе.
         """
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
-
         # Тенант A: загружает документ
         tenant_a = await create_tenant(db, "Tenant A")
         admin_a = await create_user(db, tenant_a, email="a@test.com", role=UserRole.admin)
@@ -160,9 +152,7 @@ class TestListDocuments:
         assert response.status_code == 200
         assert response.json()["total"] == 0  # документы тенанта A не видны
 
-    async def test_pagination(self, client, db, admin_user, admin_headers, tmp_path, monkeypatch):
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
-
+    async def test_pagination(self, client, db, admin_user, admin_headers):
         for i in range(5):
             await client.post(
                 "/api/v1/docs/documents",
@@ -179,9 +169,7 @@ class TestListDocuments:
         assert body["total"] == 5
         assert len(body["items"]) == 2
 
-    async def test_filter_by_status(self, client, admin_headers, tmp_path, monkeypatch):
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
-
+    async def test_filter_by_status(self, client, admin_headers):
         await client.post(
             "/api/v1/docs/documents",
             files={"file": ("f.pdf", io.BytesIO(FAKE_PDF), "application/pdf")},
@@ -197,9 +185,7 @@ class TestListDocuments:
 
 
 class TestGetDocument:
-    async def test_get_existing(self, client, admin_headers, tmp_path, monkeypatch):
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
-
+    async def test_get_existing(self, client, admin_headers):
         upload = await client.post(
             "/api/v1/docs/documents",
             files={"file": ("doc.pdf", io.BytesIO(FAKE_PDF), "application/pdf")},
@@ -221,13 +207,11 @@ class TestGetDocument:
 
         assert response.status_code == 404
 
-    async def test_cannot_get_other_tenants_document(self, client, db, tmp_path, monkeypatch):
+    async def test_cannot_get_other_tenants_document(self, client, db):
         """
         Документ другого тенанта должен возвращать 404,
         а не 403 — не раскрываем что документ существует.
         """
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
-
         # Тенант A создаёт документ
         tenant_a = await create_tenant(db, "A Corp")
         admin_a = await create_user(db, tenant_a, email="adma@test.com", role=UserRole.admin)
@@ -251,9 +235,7 @@ class TestGetDocument:
 
 
 class TestDeleteDocument:
-    async def test_admin_can_delete(self, client, admin_headers, tmp_path, monkeypatch):
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
-
+    async def test_admin_can_delete(self, client, admin_headers):
         upload = await client.post(
             "/api/v1/docs/documents",
             files={"file": ("del.pdf", io.BytesIO(FAKE_PDF), "application/pdf")},
@@ -270,10 +252,8 @@ class TestDeleteDocument:
         assert get_response.status_code == 404
 
     async def test_regular_user_cannot_delete(
-        self, client, db, admin_user, admin_headers, user_headers, tmp_path, monkeypatch
+        self, client, db, admin_user, admin_headers, user_headers
     ):
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
-
         upload = await client.post(
             "/api/v1/docs/documents",
             files={"file": ("nd.pdf", io.BytesIO(FAKE_PDF), "application/pdf")},
@@ -285,11 +265,9 @@ class TestDeleteDocument:
         response = await client.delete(f"/api/v1/docs/documents/{doc_id}", headers=user_headers)
         assert response.status_code == 403
 
-    async def test_cannot_delete_processing_document(
-        self, client, db, admin_user, admin_headers, tmp_path, monkeypatch
-    ):
+    async def test_cannot_delete_processing_document(self, client, db, admin_user, admin_headers):
         """Нельзя удалять документ пока идёт индексирование."""
-        monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
+        from uuid import UUID
 
         from sqlalchemy import select
 
@@ -304,8 +282,6 @@ class TestDeleteDocument:
         doc_id = upload.json()["id"]
 
         # Вручную меняем статус на processing
-        from uuid import UUID
-
         doc = await db.scalar(select(Document).where(Document.id == UUID(doc_id)))
         doc.status = DocumentStatus.processing
         await db.flush()

@@ -1,3 +1,6 @@
+import shutil
+from unittest.mock import MagicMock, patch
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -5,6 +8,7 @@ from sqlalchemy import NullPool
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from testcontainers.postgres import PostgresContainer
 
+from eka.config import settings
 from eka.db.models import Base, Tenant, User, UserRole
 from eka.deps import get_db_session
 from eka.main import app
@@ -18,7 +22,6 @@ from eka.services.token import create_token_pair
 
 @pytest.fixture(scope="session")
 def postgres_container():
-    # Используем актуальную для проекта 18-ю версию
     with PostgresContainer("postgres:18") as postgres:
         yield postgres
 
@@ -27,7 +30,6 @@ def postgres_container():
 async def test_engine(postgres_container):
     url = postgres_container.get_connection_url()
 
-    # Универсальная замена любого синхронного драйвера на asyncpg
     if "://" in url:
         _, address = url.split("://", 1)
         async_url = f"postgresql+asyncpg://{address}"
@@ -42,7 +44,6 @@ async def test_engine(postgres_container):
 
 @pytest.fixture(scope="session")
 def db_session_maker(test_engine):
-    """Создает фабрику сессий один раз на всю сессию тестов."""
     return async_sessionmaker(
         bind=test_engine,
         class_=AsyncSession,
@@ -54,7 +55,6 @@ def db_session_maker(test_engine):
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def create_tables(test_engine):
-    """Создаёт все таблицы один раз перед стартом тестов."""
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -63,17 +63,42 @@ async def create_tables(test_engine):
 async def db(test_engine):
     """
     Изоляция тестов через транзакцию.
-    Передаем db_session_maker как аргумент, pytest сам подставит фабрику.
     """
     async with test_engine.connect() as connection:
         transaction = await connection.begin()
 
-        session = AsyncSession(bind=connection, join_transaction_mode="create_savepoint")
+        session = AsyncSession(
+            bind=connection,
+            join_transaction_mode="create_savepoint",
+            expire_on_commit=False,
+        )
 
         yield session
 
         await session.close()
         await transaction.rollback()
+
+
+# ──────────────────────────────────────────────
+# Управление файлами
+# ──────────────────────────────────────────────
+
+
+@pytest.fixture(autouse=True)
+def setup_upload_dir(tmp_path, monkeypatch):
+    upload_dir = tmp_path / "uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(settings, "UPLOAD_DIR", str(upload_dir))
+
+    yield
+
+    if upload_dir.exists():
+        shutil.rmtree(upload_dir, ignore_errors=True)
+
+
+# ──────────────────────────────────────────────
+# Тестовый клиент (ИСПРАВЛЕНО)
+# ──────────────────────────────────────────────
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -82,13 +107,15 @@ async def client(db: AsyncSession):
     Тестовый клиент, который заставляет FastAPI использовать
     нашу тестовую сессию с настроенным откатом (rollback).
     """
-    # Подменяем зависимость базы данных
-    app.dependency_overrides[get_db_session] = lambda: db
+
+    async def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db_session] = override_get_db
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
-    # Очищаем переопределение после теста
     app.dependency_overrides.clear()
 
 
@@ -125,13 +152,12 @@ async def create_user(
 
 
 def auth_headers(user: User) -> dict:
-    """Возвращает заголовок Authorization для пользователя."""
     tokens = create_token_pair(user_id=user.id)
     return {"Authorization": f"Bearer {tokens.access_token}"}
 
 
 # ──────────────────────────────────────────────
-# Готовые фикстуры для часто используемых объектов
+# Готовые фикстуры
 # ──────────────────────────────────────────────
 
 
@@ -158,3 +184,23 @@ def user_headers(regular_user):
 @pytest.fixture
 def admin_headers(admin_user):
     return auth_headers(admin_user)
+
+
+@pytest.fixture(autouse=True)
+def mock_celery_tasks():
+    """
+    Предотвращает реальные вызовы Celery в тестах API.
+    Мокает .delay() и .apply_async(), чтобы не было попыток
+    подключения к RabbitMQ/Redis, тесты не зависали и работал Ctrl+C.
+    """
+    with (
+        patch("eka.tasks.indexing.index_document.delay") as mock_delay,
+        patch("eka.tasks.indexing.index_document.apply_async") as mock_apply,
+    ):
+        mock_result = MagicMock()
+        mock_result.id = "mocked-task-id-12345"
+
+        mock_delay.return_value = mock_result
+        mock_apply.return_value = mock_result
+
+        yield mock_delay

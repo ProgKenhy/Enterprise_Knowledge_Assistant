@@ -1,0 +1,40 @@
+# Виртуальное окружение и кэши
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Конфиги Docker и СЕКРЕТЫ
+.env
+.env.*
+*.pem
+*.key
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# IDE и системные файлы
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Тесты, документация и метрики (не нужны в финальном контейнере)
+tests/
+docs/
+*.md
+monitoring/
+
+# Логи и локальные загрузки
+logs/
+uploads/*
+!uploads/.keep
+
+# Артефакты сборки
+dist/
+build/
+poetry.toml     # Если у вас локальные настройки poetry (обычно не нужен в образе)

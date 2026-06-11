@@ -1,14 +1,16 @@
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
+from contextlib import contextmanager
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from eka.config import get_settings
 from eka.db.models import User, UserRole
-from eka.db.pg import AsyncSessionLocal
+from eka.db.pg import AsyncSessionLocal, SyncSessionLocal
 from eka.repositories.user import get_user_by_id
 from eka.services.token import decode_token
 
@@ -23,6 +25,12 @@ async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]
             yield session
         finally:
             await session.close()
+
+
+@contextmanager
+def get_sync_db_session() -> Generator[Session, None, None]:
+    with SyncSessionLocal() as session:
+        yield session
 
 
 async def get_user_id_from_token(token: str = Depends(oauth2_scheme)) -> UUID | None:

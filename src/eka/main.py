@@ -6,6 +6,7 @@ from fastapi import FastAPI
 
 from eka.api.v1.routers import api_router as v1_router
 from eka.config import get_settings
+from eka.core.indexing.vector_store import close_qdrant, init_qdrant
 from eka.db.pg import engine
 
 sys.path.append(str(Path(__file__).resolve().parent))
@@ -15,9 +16,13 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # [STARTUP] Здесь можно проверить коннект к БД или запустить логирование
+    await init_qdrant(
+        url=settings.QDRANT_URL,
+        collection=settings.QDRANT_COLLECTION,
+        dim=settings.EMBEDDING_DIM,
+    )
     yield
-    # [SHUTDOWN] Очищаем пул соединений при остановке приложения
+    await close_qdrant()
     await engine.dispose()
 
 
