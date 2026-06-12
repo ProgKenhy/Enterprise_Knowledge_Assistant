@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     EMBEDDING_DENSE_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     EMBEDDING_PROVIDER: str = "local"
     OPENAI_API_KEY: str | None = None
+    OPENAI_BASE_URL: str | None = None
     EMBEDDING_BATCH_SIZE: int = 32
     EMBEDDING_DIM: int = 384
 
@@ -78,7 +79,7 @@ class Settings(BaseSettings):
 
     # RAG
     RETRIEVAL_TOP_K: int = 20  # Сколько кандидатов для reranker
-    RERANK_TOP_K: int = 5  # Сколько после reranking
+    RERANK_TOP_K: int = 7  # Сколько после reranking
     CHUNK_SIZE: int = 512  # Токены
     CHUNK_OVERLAP: int = 50  # Токены
 
