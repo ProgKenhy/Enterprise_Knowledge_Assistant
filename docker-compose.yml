@@ -5,6 +5,8 @@ services:
     container_name: rag_api
     restart: unless-stopped
     env_file: .env
+    environment:
+      - FASTEMBED_CACHE_DIR=/app/.cache/fastembed
     ports:
       - "8000:8000"
     volumes:
@@ -33,7 +35,8 @@ services:
     container_name: rag_worker
     restart: unless-stopped
     env_file: .env
-    entrypoint: []
+    environment:
+      - FASTEMBED_CACHE_DIR=/app/.cache/fastembed
     volumes:
       - ./src:/app/src
       - ./uploads:/app/uploads
