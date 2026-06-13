@@ -69,8 +69,8 @@ class Settings(BaseSettings):
     RERANKER_TOP_K: int = 5
 
     # LLM
-    LLM_PROVIDER: str = "openai"  # openai, anthropic, ollama
-    LLM_MODEL: str = "gpt-4o-mini"
+    LLM_PROVIDER: str = "ollama"  # openai, anthropic, ollama
+    LLM_MODEL: str = "qwen2.5:7b"
     LLM_TEMPERATURE: float = 0.0
     LLM_MAX_TOKENS: int = 1500
 

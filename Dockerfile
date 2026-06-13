@@ -12,7 +12,8 @@ WORKDIR /build
 COPY pyproject.toml poetry.lock ./
 
 RUN poetry config virtualenvs.create false \
-    && poetry install --without dev --no-root --sync
+    && poetry install --without dev --no-root             
+    # --sync чистая переустановка зависимостей
 
 # 5. И ТОЛЬКО ТЕПЕРЬ копируем остальной код
 COPY . .

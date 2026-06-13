@@ -3,7 +3,7 @@ from collections.abc import AsyncGenerator
 from uuid import UUID
 
 from eka.config import get_settings
-from eka.core.rag.generator import MockLLMGenerator
+from eka.core.rag.generator import OpenAIGenerator
 from eka.core.rag.retriever import HybridRetriever, RetrievedChunk
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ class RAGQueryPipeline:
 
     def __init__(self):
         self.retriever = HybridRetriever()
-        self.generator = MockLLMGenerator()
+        self.generator = OpenAIGenerator()
 
     async def search(self, query: str, tenant_id: UUID) -> list[RetrievedChunk]:
         """Гибридный поиск. Возвращает топ чанков."""

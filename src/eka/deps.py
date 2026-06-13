@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from eka.config import get_settings
+from eka.core.rag.pipeline import RAGQueryPipeline
 from eka.db.models import User, UserRole
 from eka.db.pg import AsyncSessionLocal, SyncSessionLocal
 from eka.repositories.user import get_user_by_id
@@ -76,3 +77,7 @@ def require_role(*roles: UserRole):
         return current_user
 
     return _check
+
+
+def get_rag_pipeline(request: Request) -> RAGQueryPipeline:
+    return request.app.state.rag_pipeline

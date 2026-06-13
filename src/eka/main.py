@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from eka.api.v1.routers import api_router as v1_router
 from eka.config import get_settings
 from eka.core.indexing.vector_store import close_qdrant, init_qdrant
+from eka.core.rag.pipeline import RAGQueryPipeline
 from eka.db.pg import engine
 
 sys.path.append(str(Path(__file__).resolve().parent))
@@ -21,8 +22,10 @@ async def lifespan(app: FastAPI):
         collection=settings.QDRANT_COLLECTION,
         dim=settings.EMBEDDING_DIM,
     )
+    app.state.rag_pipeline = RAGQueryPipeline()
     yield
     await close_qdrant()
+    await app.state.rag_pipeline.generator.close()
     await engine.dispose()
 
 

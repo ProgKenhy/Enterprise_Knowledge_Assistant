@@ -1,6 +1,3 @@
-
----
-
 # Enterprise Knowledge Assistant (RAG System)
 
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
@@ -14,13 +11,14 @@
 
 ---
 
-## 🚀 Ключевые особенности (Почему это сделано правильно)
+## 🚀 Ключевые особенности
 
 *   **Гибридный поиск (Hybrid Search):** Комбинация семантического (Dense, `paraphrase-multilingual-MiniLM-L12-v2`) и лексического (Sparse, `BM25`) поиска с алгоритмом **RRF (Reciprocal Rank Fusion)** для максимальной релевантности без использования тяжелых Cross-Encoder реранкеров.
+*   **Реальная интеграция с LLM:** Поддержка OpenRouter, Groq, Ollama, vLLM и любых OpenAI-совместимых API. Потоковый стриминг через SSE (Server-Sent Events) для мгновенной обратной связи.
 *   **Строгая Multi-tenant изоляция:** Каждый запрос к векторной базе (Qdrant) и реляционной БД (PostgreSQL) жестко фильтруется по `tenant_id`. Утечка данных между клиентами архитектурно невозможна.
 *   **Асинхронная архитектура:** Разделение ответственности. FastAPI мгновенно принимает файл, а тяжелая задача парсинга и эмбеддинга делегируется Celery-воркерам через RabbitMQ, не блокируя основной поток.
 *   **Оптимизация ресурсов:** Использование `fastembed` (ONNX-модели) вместо тяжелого `transformers` + `PyTorch`. Потребление памяти снижено с ~3 ГБ до ~150 МБ, что критично для деплоя.
-*   **Production-ready тестирование:** Комплексный набор тестов на `pytest` + `testcontainers`. Внешние зависимости (Celery, Qdrant, LLM) корректно мокаются, что гарантирует скорость выполнения тестов и отсутствие зависаний (no hanging tests).
+*   **Production-ready тестирование:** Комплексный набор тестов на `pytest` + `testcontainers`. Внешние зависимости (Celery, Qdrant, LLM) корректно мокаются, что гарантирует скорость выполнения тестов и отсутствие зависаний.
 
 ---
 
@@ -40,7 +38,7 @@ graph TD
     Client -->|8. RAG Запрос| API
     API -->|9. Поиск по tenant_id| Qdrant
     Qdrant -->|10. Топ-K чанков| API
-    API -->|11. Генерация ответа| LLM[LLM Provider / Mock]
+    API -->|11. Генерация ответа| LLM[LLM Provider: OpenRouter/Groq/Ollama]
     LLM -->|12. SSE Stream| Client
 ```
 
@@ -52,6 +50,7 @@ graph TD
 | :--- | :--- |
 | **Backend** | Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2.0 (Async) |
 | **AI / RAG** | FastEmbed (ONNX), Hybrid Search (Dense + Sparse), RRF Fusion |
+| **LLM Integration** | OpenRouter, Groq, Ollama, vLLM (OpenAI-compatible API) |
 | **Очереди и Кэш** | Celery, RabbitMQ, Redis |
 | **Хранилища** | PostgreSQL 18, Qdrant (Vector DB) |
 | **DevOps & Tools** | Docker, Docker Compose, Poetry, Alembic, Pytest, Testcontainers |
@@ -69,16 +68,32 @@ cd enterprise-knowledge-assistant
 ```
 
 ### 2. Настройте переменные окружения
-Скопируйте пример файла конфигурации и заполните его (для базового запуска достаточно значений по умолчанию):
+Скопируйте пример файла конфигурации и заполните его:
 ```bash
 cp .env.example .env
 ```
-> **Примечание:** По умолчанию используется `MockLLMGenerator`, чтобы вы могли протестировать весь пайплайн (включая SSE-стриминг) без API-ключа OpenAI. Для подключения реального LLM раскомментируйте и заполните `OPENAI_API_KEY` в `.env`.
+
+Откройте `.env` и укажите настройки LLM-провайдера:
+
+**Вариант A: OpenRouter (рекомендуется)**
+```env
+LLM_MODEL=nex-agi/nex-n2-pro:free
+OPENAI_API_KEY=sk-or-v1-ваш-ключ-от-openrouter
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+```
+
+
+**Вариант B: Ollama (локально)**
+```env
+LLM_MODEL=qwen2.5:7b
+OPENAI_API_KEY=ollama
+OPENAI_BASE_URL=http://host.docker.internal:11434/v1
+```
 
 ### 3. Запустите инфраструктуру
 Соберите образы и запустите все сервисы в фоновом режиме:
 ```bash
-docker compose up -d --build
+docker-compose up --build
 ```
 *Этот процесс займет 1-2 минуты при первом запуске (скачивание баз данных и ONNX-моделей).*
 
@@ -104,9 +119,9 @@ poetry run pytest -v
 poetry run pytest -v -s
 
 # 4. Запуск тестов только для конкретного модуля (например, RAG-пайплайна)
-poetry run pytest tests/test_rag.py -v
-
+poetry run pytest tests/rag/test_generator.py -v
 ```
+
 ---
 
 ## 📂 Структура проекта
@@ -133,10 +148,11 @@ poetry run pytest tests/test_rag.py -v
 ## 🔮 Дальнейшее развитие (Roadmap)
 
 Проект заложен с возможностью легкого расширения:
-1. [ ] Интеграция реального LLM-провайдера (OpenAI, Groq или локальный Ollama/vLLM).
+1. [x] ~~Интеграция реального LLM-провайдера~~ ✅ Выполнено (OpenRouter, Groq, Ollama)
 2. [ ] Добавление модуля оценки качества (RAGAS) для автоматического мониторинга метрик Retrieval и Generation.
 3. [ ] Внедрение Observability: структурированные логи (Structlog), трейсинг запросов (OpenTelemetry) и метрики Prometheus.
 4. [ ] Поддержка потоковой загрузки больших файлов (Chunked Upload) для документов >100MB.
+5. [ ] Добавление истории чатов и feedback-механизма (👍/👎) для улучшения качества ответов.
 
 ---
 
@@ -144,5 +160,3 @@ poetry run pytest tests/test_rag.py -v
 
 Разработано с фокусом на лучшие практики Enterprise-разработки.  
 Открыт для обсуждения архитектурных решений и возможностей сотрудничества.
-
----

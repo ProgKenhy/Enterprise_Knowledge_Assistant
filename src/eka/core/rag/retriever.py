@@ -77,9 +77,18 @@ class HybridRetriever:
         qdrant = get_qdrant()
 
         # 1. Создаем эмбеддинги запроса
-        dense_query_vector = list(self.dense_model.query_embed(query))[0].tolist()
+        dense_embedding_task = asyncio.to_thread(
+            lambda: list(self.dense_model.query_embed(query))[0].tolist()
+        )
+        sparse_embedding_task = asyncio.to_thread(
+            lambda: list(self.sparse_model.query_embed(query))[0]
+        )
 
-        sparse_raw = list(self.sparse_model.query_embed(query))[0]
+        # Выполняем оба эмбеддинга параллельно
+        dense_query_vector, sparse_raw = await asyncio.gather(
+            dense_embedding_task, sparse_embedding_task
+        )
+
         sparse_query_vector = SparseVector(
             indices=sparse_raw.indices.tolist(),
             values=sparse_raw.values.tolist(),

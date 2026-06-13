@@ -15,7 +15,7 @@ from eka.repositories.document import (
 from eka.schemas.document import DocumentListResponse, DocumentResponse
 from eka.tasks.indexing import index_document
 
-documents_router = APIRouter(prefix="/documents", tags=["documents"])
+documents_router = APIRouter()
 
 
 @documents_router.post(
