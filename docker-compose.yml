@@ -14,7 +14,7 @@ services:
       - ./uploads:/app/uploads
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
-      - ./keys:/app/keys:ro
+      - ./keys:/app/keys
       - fastembed_cache:/app/.cache/fastembed
     depends_on:
       postgres:
@@ -27,8 +27,8 @@ services:
         condition: service_healthy
     networks:
       - rag_net
+    entrypoint: [ "/entrypoint.sh" ]
     command: uvicorn eka.main:app --host 0.0.0.0 --reload
-
 
   worker:
     build: .
@@ -40,7 +40,7 @@ services:
     volumes:
       - ./src:/app/src
       - ./uploads:/app/uploads
-      - ./keys:/app/keys:ro
+      - ./keys:/app/keys
       - fastembed_cache:/app/.cache/fastembed
     depends_on:
       postgres:
@@ -53,7 +53,6 @@ services:
       - rag_net
     command: celery -A eka.tasks.celery_app worker --loglevel=info -Q indexing
 
-
   postgres:
     image: postgres:18
     container_name: rag_postgres
@@ -65,14 +64,13 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
       interval: 5s
       retries: 10
     ports:
       - "${POSTGRES_PORT_FORWARD}:5432"
     networks:
       - rag_net
-
 
   qdrant:
     build:
@@ -85,7 +83,7 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:6333/readyz || exit 1"]
+      test: [ "CMD-SHELL", "curl -f http://localhost:6333/readyz || exit 1" ]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -93,23 +91,21 @@ services:
     networks:
       - rag_net
 
-
   redis:
     image: redis:7-alpine
     container_name: rag_redis
     restart: unless-stopped
     command: redis-server --appendonly yes
     ports:
-    - "6379:6379"
+      - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       retries: 10
     networks:
       - rag_net
-
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -121,14 +117,12 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 10
     networks:
       - rag_net
-
-
   # prometheus:
   #   image: prom/prometheus
   #   container_name: rag_prometheus

@@ -35,11 +35,13 @@ COPY --from=builder /usr/local /usr/local
 COPY --chown=appuser:appuser src/ src/
 COPY --chown=appuser:appuser alembic/ alembic/
 COPY --chown=appuser:appuser alembic.ini ./
+COPY --chown=appuser:appuser keys/generate_rsa_keys.py /app/keys/generate_rsa_keys.py
 COPY --chown=appuser:appuser entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh
 
 RUN mkdir -p uploads && chown appuser:appuser uploads
+RUN mkdir -p /app/keys && chown appuser:appuser /app/keys
 
 # Создаем папку для кэша моделей и отдаем права appuser
 RUN mkdir -p /app/.cache/fastembed && chown -R appuser:appuser /app/.cache
@@ -51,5 +53,4 @@ USER appuser
 ENV PYTHONPATH="/app/src"
 ENV PYTHONUNBUFFERED=1
 
-ENTRYPOINT ["/entrypoint.sh"]
 CMD ["uvicorn", "eka.main:app", "--host", "0.0.0.0", "--port", "8000"]

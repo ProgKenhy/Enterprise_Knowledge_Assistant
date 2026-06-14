@@ -5,6 +5,9 @@ set -e
 # (иногда healthcheck срабатывает на миллисекунды раньше, чем БД готова к созданию таблиц)
 sleep 2
 
+echo "🔑 JWT keys generation..."
+python /app/keys/generate_rsa_keys.py
+
 echo "🚀 Applying database migrations..."
 alembic upgrade head
 
