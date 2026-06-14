@@ -24,12 +24,12 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
 
     # Database
-    POSTGRES_HOST: str
-    POSTGRES_PORT: int
-    POSTGRES_PORT_FORWARD: int
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: SecretStr
-    POSTGRES_DB: str
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_PORT_FORWARD: int = 5432
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: SecretStr = SecretStr("postgres")
+    POSTGRES_DB: str = "eka"
 
     @property
     def db_port(self) -> int:
@@ -38,10 +38,10 @@ class Settings(BaseSettings):
         return self.POSTGRES_PORT
 
     # Redis
-    REDIS_HOST: str
-    REDIS_PORT: int
-    REDIS_PORT_FORWARD: int
-    REDIS_DB: int
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_PORT_FORWARD: int = 6379
+    REDIS_DB: int = 0
     REDIS_PASSWORD: SecretStr | None = None
 
     @property
@@ -92,10 +92,10 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://redis:6379/1"
 
     # CORS
-    CORS_ORIGINS: str
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
 
     # Auth
-    JWT_ALG: str
+    JWT_ALG: str = "RS256"
     JWT_PRIVATE_KEY_PATH: Path = Path(BASE_DIR / "keys/private.pem")
     JWT_PUBLIC_KEY_PATH: Path = Path(BASE_DIR / "keys/public.pem")
     ACCESS_TOKEN_EXPIRE_SECONDS: int = 15 * 60
