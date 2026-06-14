@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from eka.api.v1.routers import api_router as v1_router
 from eka.config import get_settings
@@ -31,5 +32,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 app.include_router(v1_router, prefix=settings.API_V1_PREFIX)

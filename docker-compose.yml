@@ -123,26 +123,95 @@ services:
       retries: 10
     networks:
       - rag_net
-  # prometheus:
-  #   image: prom/prometheus
-  #   container_name: rag_prometheus
-  #   ports:
-  #     - "9090:9090"
-  #   volumes:
-  #     - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-  #   networks:
-  #     - rag_net
 
+  # ──────────────────────────────────────────────
+  # Мониторинг и Observability
+  # ──────────────────────────────────────────────
+  
+  prometheus:
+    image: prom/prometheus:v3.11.3
+    container_name: rag_prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - rag_net
 
-  # grafana:
-  #   image: grafana/grafana
-  #   container_name: rag_grafana
-  #   ports:
-  #     - "3000:3000"
-  #   volumes:
-  #     - ./monitoring/dashboards:/var/lib/grafana/dashboards
-  #   networks:
-  #     - rag_net
+  grafana:
+    image: grafana/grafana:13.0.2
+    container_name: rag_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      # Можно добавить предварительно настроенные дашборды:
+      # - ./monitoring/dashboards:/etc/grafana/provisioning/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - rag_net
+    depends_on:
+      - prometheus
+
+  node_exporter:
+    image: prom/node-exporter:v1.11.1
+    container_name: rag_node_exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - rag_net
+
+  # ──────────────────────────────────────────────
+  # Логирование (Loki + Promtail)
+  # ──────────────────────────────────────────────
+  
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: rag_loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - rag_net
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: rag_promtail
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/promtail-config.yaml:/etc/promtail/config.yml:ro
+      # Доступ к логам всех контейнеров Docker на хосте
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - rag_net
+    depends_on:
+      - loki
 
 
 volumes:
@@ -151,6 +220,9 @@ volumes:
   redis_data:
   rabbitmq_data:
   fastembed_cache:
+  prometheus_data:
+  grafana_data:
+  loki_data:
 
 networks:
   rag_net:
