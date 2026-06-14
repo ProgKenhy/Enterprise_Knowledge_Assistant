@@ -10,7 +10,7 @@ from eka.core.rag.pipeline import RAGQueryPipeline
 def pipeline():
     with (
         patch("eka.core.rag.pipeline.HybridRetriever"),
-        patch("eka.core.rag.pipeline.MockLLMGenerator"),
+        patch("eka.core.rag.pipeline.OpenAIGenerator"),
     ):
         p = RAGQueryPipeline()
         p.retriever = AsyncMock()
