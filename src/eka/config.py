@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     EMBEDDING_DENSE_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     EMBEDDING_PROVIDER: str = "local"
     OPENAI_API_KEY: str | None = None
-    OPENAI_BASE_URL: str | None = None
+    OPENAI_BASE_URL: str | None = "https://openrouter.ai/api/v1"
     EMBEDDING_BATCH_SIZE: int = 32
     EMBEDDING_DIM: int = 384
 
@@ -69,8 +69,8 @@ class Settings(BaseSettings):
     RERANKER_TOP_K: int = 5
 
     # LLM
-    LLM_PROVIDER: str = "ollama"  # openai, anthropic, ollama
-    LLM_MODEL: str = "qwen2.5:7b"
+    LLM_PROVIDER: str = "openrouter"  # openai, anthropic, ollama
+    LLM_MODEL: str = "nvidia/nemotron-3-super-120b-a12b:free"
     LLM_TEMPERATURE: float = 0.0
     LLM_MAX_TOKENS: int = 1500
 

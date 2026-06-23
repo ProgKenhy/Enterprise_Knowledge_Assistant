@@ -99,19 +99,22 @@ cd Enterprise_Knowledge_Assistant
 cp .env.example .env
 ```
 
-Откройте `.env` и укажите настройки LLM-провайдера:
+Откройте .env и укажите настройки LLM-провайдера. По умолчанию используется OpenRouter с моделью nvidia/nemotron-3-super-120b-a12b:free — она уже настроена в src/eka/config.py, поэтому достаточно указать только API-ключ.
 
-**Вариант A: OpenRouter (рекомендуется)**
+
+**Вариант A: OpenRouter (рекомендуется, используется по умолчанию)**
+
+Настройте в .env
 ```env
-LLM_MODEL=nex-agi/nex-n2-pro:free
 OPENAI_API_KEY=sk-or-v1-ваш-ключ-от-openrouter
-OPENAI_BASE_URL=https://openrouter.ai/api/v1
 ```
 
-**Вариант B: Ollama (локально)**
-```env
+**Вариант B: Ollama (локально, без API-ключа)**
+
+Настройте в config.py
+```config
+LLM_PROVIDER=ollama
 LLM_MODEL=qwen2.5:7b
-OPENAI_API_KEY=ollama
 OPENAI_BASE_URL=http://host.docker.internal:11434/v1
 ```
 
