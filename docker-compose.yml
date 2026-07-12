@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      - FASTEMBED_CACHE_DIR=/app/.cache/fastembed
+      - FASTEMBED_CACHE_PATH=/app/.cache/fastembed
     ports:
       - "8000:8000"
     volumes:
@@ -36,7 +36,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      - FASTEMBED_CACHE_DIR=/app/.cache/fastembed
+      - FASTEMBED_CACHE_PATH=/app/.cache/fastembed
     volumes:
       - ./src:/app/src
       - ./uploads:/app/uploads

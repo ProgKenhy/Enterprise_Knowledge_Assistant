@@ -46,7 +46,7 @@ RUN mkdir -p /app/keys && chown appuser:appuser /app/keys
 # Создаем папку для кэша моделей и отдаем права appuser
 RUN mkdir -p /app/.cache/fastembed && chown -R appuser:appuser /app/.cache
 # Указываем fastembed использовать эту папку
-ENV FASTEMBED_CACHE_DIR="/app/.cache/fastembed"
+ENV FASTEMBED_CACHE_PATH="/app/.cache/fastembed"
 
 USER appuser
 
