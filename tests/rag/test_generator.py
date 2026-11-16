@@ -27,6 +27,7 @@ def mock_chunks():
 def generator():
     """Создаёт генератор с тестовыми настройками."""
     with patch("eka.core.rag.generator.settings") as mock_settings:
+        mock_settings.LLM_PROVIDER = "openrouter"
         mock_settings.LLM_MODEL = "test-model"
         mock_settings.OPENAI_API_KEY = "sk-test-key"
         mock_settings.OPENAI_BASE_URL = "https://test.api/v1"
@@ -178,6 +179,7 @@ def test_generator_raises_on_missing_api_key():
     """Генератор должен поднять ошибку, если API-ключ не задан."""
     with patch("eka.core.rag.generator.settings") as mock_settings:
         mock_settings.LLM_MODEL = "test-model"
+        mock_settings.LLM_PROVIDER = "openrouter"
         mock_settings.OPENAI_API_KEY = ""
         mock_settings.OPENAI_BASE_URL = "https://test.api/v1"
 
@@ -185,12 +187,14 @@ def test_generator_raises_on_missing_api_key():
             OpenAIGenerator()
 
 
-def test_generator_raises_on_dummy_api_key():
-    """Генератор должен поднять ошибку, если API-ключ содержит заглушку."""
+def test_ollama_does_not_require_api_key():
+    """Ollama не требует API-ключа и не получает заголовок Authorization."""
     with patch("eka.core.rag.generator.settings") as mock_settings:
-        mock_settings.LLM_MODEL = "test-model"
-        mock_settings.OPENAI_API_KEY = "dummy"
-        mock_settings.OPENAI_BASE_URL = "https://test.api/v1"
+        mock_settings.LLM_MODEL = "qwen2.5:7b"
+        mock_settings.LLM_PROVIDER = "ollama"
+        mock_settings.OPENAI_API_KEY = None
+        mock_settings.OPENAI_BASE_URL = "http://localhost:11434/v1"
 
-        with pytest.raises(ValueError, match="OPENAI_API_KEY не задан"):
-            OpenAIGenerator()
+        generator = OpenAIGenerator()
+
+    assert "Authorization" not in generator._get_headers()

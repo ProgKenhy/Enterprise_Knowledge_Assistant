@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import RedisDsn, SecretStr, computed_field
+from pydantic import Field, RedisDsn, SecretStr, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -59,8 +59,6 @@ class Settings(BaseSettings):
     EMBEDDING_SPARSE_MODEL: str = "Qdrant/bm25"
     EMBEDDING_DENSE_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     EMBEDDING_PROVIDER: str = "local"
-    OPENAI_API_KEY: str | None = None
-    OPENAI_BASE_URL: str | None = "https://openrouter.ai/api/v1"
     EMBEDDING_BATCH_SIZE: int = 32
     EMBEDDING_DIM: int = 384
 
@@ -70,7 +68,11 @@ class Settings(BaseSettings):
 
     # LLM
     LLM_PROVIDER: str = "openrouter"  # openai, anthropic, ollama
-    LLM_MODEL: str = "nvidia/nemotron-3-super-120b-a12b:free"
+    LLM_MODEL: str = Field(min_length=1)
+
+    # OpenAI-compatible endpoint credentials (OpenRouter by default).
+    OPENAI_API_KEY: str | None = None
+    OPENAI_BASE_URL: str | None = "https://openrouter.ai/api/v1"
     LLM_TEMPERATURE: float = 0.0
     LLM_MAX_TOKENS: int = 1500
 

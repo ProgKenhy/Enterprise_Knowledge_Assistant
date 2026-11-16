@@ -31,8 +31,8 @@ class OpenAIGenerator:
         self.api_key = settings.OPENAI_API_KEY
         self.base_url = settings.OPENAI_BASE_URL or "https://openrouter.ai/api/v1"
 
-        if not self.api_key or self.api_key in ("dummy", "sk-your-api-key-here", ""):
-            raise ValueError("OPENAI_API_KEY не задан или содержит заглушку")
+        if settings.LLM_PROVIDER != "ollama" and not self.api_key:
+            raise ValueError("OPENAI_API_KEY не задан")
 
         logger.info(
             "LLM Generator initialized: model=%s, base_url=%s",
@@ -41,12 +41,14 @@ class OpenAIGenerator:
         )
 
     def _get_headers(self) -> dict:
-        return {
-            "Authorization": f"Bearer {self.api_key}",
+        headers = {
             "Content-Type": "application/json",
             "HTTP-Referer": "http://localhost:8000",
             "X-Title": "Enterprise Knowledge Assistant",
         }
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        return headers
 
     def _format_context(self, chunks: list[RetrievedChunk]) -> str:
         if not chunks:

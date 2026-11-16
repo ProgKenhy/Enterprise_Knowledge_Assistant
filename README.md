@@ -122,11 +122,31 @@ cd Enterprise_Knowledge_Assistant
 cp .env.example .env
 ```
 
-Укажи API-ключ в `.env` (модель уже задана в `config.py`):
+По умолчанию приложение использует OpenRouter. После копирования `.env.example`
+в `.env` обязательно укажи идентификатор модели и ключ OpenRouter:
 
 ```env
-OPENAI_API_KEY=sk-or-v1-ваш-ключ   # OpenRouter (по умолчанию)
+LLM_MODEL=идентификатор-модели-в-OpenRouter
+OPENAI_API_KEY=sk-or-v1-ваш-ключ
 ```
+
+Замени `идентификатор-модели-в-OpenRouter` на модель, доступную в твоём аккаунте
+OpenRouter. Модель не задана по умолчанию, чтобы приложение не выбирало устаревшую
+или недоступную модель.
+
+Провайдер и адрес API по умолчанию заданы отдельно в `src/eka/config.py`:
+
+```python
+LLM_PROVIDER: str = "openrouter"
+OPENAI_BASE_URL: str | None = "https://openrouter.ai/api/v1"
+```
+
+`LLM_MODEL` указывается в `.env`; остальные значения в блоке выше относятся к
+`config.py`.
+
+`OPENAI_API_KEY` — имя настройки для OpenAI-совместимого API: укажи здесь ключ
+OpenRouter, не ключ OpenAI/ChatGPT. Он нужен для генерации ответов, но не для
+embeddings — они считаются локально.
 
 ```bash
 docker compose up -d --build
@@ -141,7 +161,9 @@ docker compose up -d --build
 
 **Локальный LLM без API-ключа (Ollama):**
 ```env
+LLM_PROVIDER=ollama
 LLM_MODEL=qwen2.5:7b
+OPENAI_API_KEY=
 OPENAI_BASE_URL=http://host.docker.internal:11434/v1
 ```
 

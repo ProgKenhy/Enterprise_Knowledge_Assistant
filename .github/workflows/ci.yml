@@ -111,6 +111,7 @@ jobs:
         env:
           QDRANT_URL: http://localhost:6333
           LLM_PROVIDER: mock
+          LLM_MODEL: test-model
           OPENAI_API_KEY: dummy-key-for-tests
           PYTHONPATH: ${{ github.workspace }}/src
         run: poetry run pytest -v --tb=short
